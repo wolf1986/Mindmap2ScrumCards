@@ -1,0 +1,1 @@
+cscs.exe "MindmapExtraction.cs" %1 > log.txt
