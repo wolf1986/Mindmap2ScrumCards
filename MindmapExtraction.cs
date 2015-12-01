@@ -22,11 +22,11 @@ class Script
     // Priority Colors
     public static Dictionary<int, Color> TranslationsColorPriority = new Dictionary<int, Color>
         {
-            {1, Color.LightGreen},
-            {2, Color.DodgerBlue},
-            {3, Color.Yellow},
-            {4, Color.Orange},
-            {5, Color.OrangeRed},
+            {1, Color.OrangeRed},
+            {2, Color.Yellow},
+            {3, Color.Orange},
+            {4, Color.LightGreen},
+            {5, Color.DodgerBlue},
             {6, Color.Gray},
         };
 
@@ -315,7 +315,7 @@ class Script
                     {
                         {"$UserStory", story_name},
                         {"$TaskTitle", task_name},
-                        {"$Comments", GetElementsStr(elements_comments,"TEXT","\n")},
+                        {"$Comments", GetElementsStr(elements_comments,"TEXT","\n").Trim()},
                         {"$Left", task_estimation},
                         {"$P", task_priority},
                     };
