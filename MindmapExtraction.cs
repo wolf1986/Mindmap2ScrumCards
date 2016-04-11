@@ -35,9 +35,11 @@ class Script
     {
         var ret1 = name;
         var ret2 = "";
+
         try
         {
             var match = Regex.Match(name, @"(?<Text>.*?)\s*\((?<Bracets>\d*)\)\s*$");
+
             if (match.Success)
             {
                 var groups = match.Groups;
@@ -85,7 +87,7 @@ class Script
         var str = GetElementsStr(elements, attributeName, linePrefix, transformation);
         Console.WriteLine(str);
     }
-   
+
     static public void AddNewSlide(
         Presentation presentation,
         string pathFileTemplate,
@@ -93,7 +95,7 @@ class Script
         Dictionary<string, Color> translationColors)
     {
         const int cThresholdDarkColor = 500;
-        
+
         // Copy a slide from the template file
         presentation.Slides.InsertFromFile(pathFileTemplate, presentation.Slides.Count, 1, 1);
 
@@ -127,7 +129,7 @@ class Script
             }
 
             shape.TextFrame.TextRange.Text = translationTitles[key];
-            
+
             // Delete "-1" priorities
             if (key == "$P")
             {
@@ -152,7 +154,7 @@ class Script
             {
                 var fore_color = translationColors[key];
                 shape.Fill.ForeColor.RGB = ToRgb(fore_color);
-                
+
                 shape.TextFrame.TextRange.Font.Bold = MsoTriState.msoTrue;
 
                 // Light text for dark back-grounds
@@ -164,7 +166,6 @@ class Script
         }
 
         // Search inside tables
-
         foreach (var key in not_found_keys)
         {
             var shape = shapes_all.FirstOrDefault(
@@ -173,10 +174,11 @@ class Script
             );
 
             for (var i_row = 1; i_row <= shape.Table.Rows.Count; i_row++)
-                for (var i_col = 1; i_col <= shape.Table.Rows[i_row].Cells.Count; i_col ++)
+                for (var i_col = 1; i_col <= shape.Table.Rows[i_row].Cells.Count; i_col++)
                 {
                     var cell = shape.Table.Rows[i_row].Cells[i_col];
-                    if (cell.Shape.HasTextFrame == MsoTriState.msoTrue && 
+
+                    if (cell.Shape.HasTextFrame == MsoTriState.msoTrue &&
                         cell.Shape.TextFrame.TextRange.Text == key)
                     {
                         cell.Shape.TextFrame.TextRange.Text = translationTitles[key];
@@ -187,15 +189,47 @@ class Script
 
     static public int ToRgb(Color c)
     {
-        return (((int)c.B << 16) + ((int)c.G << 8) + (int)c.R) ;
+        return (((int)c.B << 16) + ((int)c.G << 8) + (int)c.R);
     }
 
-	static public void Main(string[] args)
-	{
+    static public string ExtractFirstIcon(XElement element)
+    {
+        // Find first  icon, ignore if failed
+        try
+        {
+            var icon_str = element.Element("icon").Attribute("BUILTIN").Value;
+            return icon_str;
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
+    static public string IconStrToPriority(string str)
+    {
+        try
+        {
+			var match = Regex.Match(str, @"full-(\d)$");
+            if (match.Success)
+				return match.Groups[1].Value;
+        }
+        catch {}
+		return "-1";
+    }
+
+    static public void Main(string[] args)
+    {
         var path_mindmap = "";
         var path_template = "";
         var help = false;
+		
+		// Debug
+		// -m planning.mm -t "Tasks - Template - No Left.pptx"
+		path_mindmap = "planning.mm";
+		path_template = "Tasks - Template - No Left.pptx";		
 
+		/*
         var p = new OptionSet() {
             { "m=|path-mindmap=", v => path_mindmap = v },
             { "t=|path-template=", v => path_template = v },
@@ -210,22 +244,22 @@ class Script
             p.WriteOptionDescriptions(Console.Out);
             return;
         }
-        
+		*/
+
         // Transform to full paths
         path_template = Path.GetFullPath(path_template);
         path_mindmap = Path.GetFullPath(path_mindmap);
 
         //var path_template =  
         //    Path.Combine(Directory.GetCurrentDirectory(), "Tasks - Template.pptx");
-	
+
         var path_file_save_as =
             Path.Combine(Path.GetDirectoryName(path_mindmap), Path.GetFileNameWithoutExtension(path_mindmap) + ".pptx");
 
-        
         File.Copy(path_template, path_file_save_as, true);
 
-		// Define 13 custom colors that look good on notes
-	    var list_colors_to_use = new Queue<Color> ( new [] {
+        // Define 13 custom colors that look good on notes
+        var list_colors_to_use = new Queue<Color>(new[] {
             Color.PaleGreen,
             Color.Blue,
             Color.Red,
@@ -239,7 +273,7 @@ class Script
             Color.Black,
             Color.DarkRed,
             Color.Orchid,
-	    });
+        });
 
         // Create a new powerpoint presentation 
         var pp_app = new Application
@@ -251,29 +285,32 @@ class Script
 
         var pp_pres = pp_app.Presentations.Open(path_file_save_as);
         pp_pres.Slides[1].Delete();
+
         var xml_mm = XDocument.Load(path_mindmap);
-        
+
         // Find all user-stories
-	    var elements_stories = xml_mm.Element("map").Elements().First().Elements("node");
+        var elements_stories = xml_mm.Element("map").Elements().First().Elements("node");
 
         // Output a csv-style list
-	    Console.WriteLine("* List of User-Stories:");
-	    PrintListElements(elements_stories, "TEXT", "\n\t", TransformTrimBraces);
+        Console.WriteLine("* List of User-Stories:");
+        PrintListElements(elements_stories, "TEXT", "\n\t", TransformTrimBraces);
         Console.WriteLine("\n--- --- --- ");
 
         // Output all stories information in a tree
-	    foreach (var element_story in elements_stories)
-	    {
-            var tup_story_name = 
-                SplitBracesStr(element_story.Attribute("TEXT").Value.Trim(new [] {' ', '\t'}));
+        foreach (var element_story in elements_stories)
+        {
+            var tup_story_name =
+                SplitBracesStr(element_story.Attribute("TEXT").Value.Trim(new[] { ' ', '\t' }));
 
-	        var story_name = tup_story_name.Item1;
-	        Console.WriteLine(story_name);
+            var story_name = tup_story_name.Item1;
+            Console.WriteLine(story_name);
 
-	        var elements_tasks = element_story.Elements("node");
+            var elements_tasks = element_story.Elements("node");
+
+            var story_priority = IconStrToPriority(ExtractFirstIcon(element_story));
 
             // Pick a color for the user-story
-	        var color = list_colors_to_use.Dequeue();
+            var color = list_colors_to_use.Dequeue();
 
             // Output a csv-style list
             Console.WriteLine("* List of tasks:");
@@ -281,35 +318,25 @@ class Script
             Console.WriteLine();
 
             // Find all tasks
-	        foreach (var element_task in elements_tasks)
-	        {
+            foreach (var element_task in elements_tasks)
+            {
                 var tup_task_name = SplitBracesStr(element_task.Attribute("TEXT").Value);
-	            var task_name = tup_task_name.Item1;
-	            var task_estimation = tup_task_name.Item2;
+                var task_name = tup_task_name.Item1;
+                var task_estimation = tup_task_name.Item2;
                 //Console.WriteLine("\t\n" + task_name);
-				
-				// Find first priority icon
-                // ignore if failed
-	            var task_priority = "-1";
-                try
-                {
-                    var icon_str = element_task.Element("icon").Attribute("BUILTIN").Value;
 
-                    var match = Regex.Match(icon_str, @"full-(\d)$");
-                    if (match.Success)
-                    {
-                        var groups = match.Groups;
-                        task_priority = groups[1].Value;
-                    }
-                }
-                catch {}
-				
-				// Find all task-comments
+                // Find first priority icon
+                var task_priority = IconStrToPriority(ExtractFirstIcon(element_task));
+
+                if (task_priority == "-1" && story_priority != "-1")
+                    task_priority = story_priority;
+
+                // Find all task-comments
                 var elements_comments = element_task.Elements("node");
 
                 // Dont spam log with task comments
-	            //PrintListElements(elements_comments, "TEXT", "\n\t\t");
-	            //Console.WriteLine();
+                //PrintListElements(elements_comments, "TEXT", "\n\t\t");
+                //Console.WriteLine();
 
                 var translation_titles = new Dictionary<string, string>
                     {
@@ -331,15 +358,13 @@ class Script
                     translation_titles,
                     translation_colors
                 );
-
-	        }
+            }
             Console.WriteLine("--- --- --- ");
         }
-        
+
         // Save and close the presentation
-	    pp_pres.Save();
+        pp_pres.Save();
         pp_pres.Close();
         pp_app.Quit();
-	}
+    }
 }
-
