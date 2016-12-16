@@ -1,1 +1,1 @@
-cscs.exe "MindmapExtraction.cs" %1 > log.txt
+cscs.exe MindmapExtraction -m planning.mm -t "Tasks - Template - No Left.pptx"

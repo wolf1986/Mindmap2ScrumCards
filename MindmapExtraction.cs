@@ -1,9 +1,8 @@
 //css_ref System.Xml;
 //css_ref Office;
-//t //css_ref C:\Program Files\Microsoft Visual Studio 10.0\Visual Studio Tools for Office\PIA\Office14\Office.dll;
+//css_ref NDesk.Options;
 
-//dbg: "D:\Temp\_Docs\2011.11\Team A\Planning.mm"
-// "C:\TempWilly\Docs\2011.11\Team A\Planning.mm"
+//Need office Interop, maybe in: C:\Program Files\Microsoft Visual Studio 10.0\Visual Studio Tools for Office\PIA\Office14\Office.dll;
 
 using System;
 using System.Collections.Generic;
@@ -16,9 +15,11 @@ using Microsoft.Office.Interop.PowerPoint;
 using Shape = Microsoft.Office.Interop.PowerPoint.Shape;
 
 using System.Drawing;
+using NDesk.Options;
 
 class Script
 {
+    // Priority Colors
     public static Dictionary<int, Color> TranslationsColorPriority = new Dictionary<int, Color>
         {
             {1, Color.LightGreen},
@@ -29,6 +30,7 @@ class Script
             {6, Color.Gray},
         };
 
+    // Get number in braces in the end of the string - Some User Story (12) 
     static public Tuple<string, string> SplitBracesStr(string name)
     {
         var ret1 = name;
@@ -48,6 +50,7 @@ class Script
         return new Tuple<string, string>(ret1, ret2);
     }
 
+    // Transform string with braces to CSV notation
     static public string TransformSplitBraces(string name)
     {
         var tup = SplitBracesStr(name);
@@ -59,6 +62,7 @@ class Script
         var tup = SplitBracesStr(name);
         return tup.Item1;
     }
+
     public static IEnumerable<string> GetListElements(IEnumerable<XElement> elements, string attributeName, Func<string, string> transformation = null)
     {
         if (transformation == null)
@@ -188,12 +192,39 @@ class Script
 
 	static public void Main(string[] args)
 	{
-        var path_file_template =  
-            Path.Combine(Directory.GetCurrentDirectory(), "Tasks - Template.pptx");
-        var path_mindmap = args[0];//"mindmap.mm";
+        var path_mindmap = "";
+        var path_template = "";
+        var help = false;
+
+        var p = new OptionSet() {
+            { "m=|path-mindmap=", v => path_mindmap = v },
+            { "t=|path-template=", v => path_template = v },
+            { "h|help", v => help = true}
+          };
+
+        p.Parse(args);
+
+        // Print usage if needed, stop execution
+        if (help || string.IsNullOrEmpty(path_mindmap) || string.IsNullOrEmpty(path_template))
+        {
+            p.WriteOptionDescriptions(Console.Out);
+            return;
+        }
+        
+        // Transform to full paths
+        path_template = Path.GetFullPath(path_template);
+        path_mindmap = Path.GetFullPath(path_mindmap);
+
+        //var path_template =  
+        //    Path.Combine(Directory.GetCurrentDirectory(), "Tasks - Template.pptx");
+	
         var path_file_save_as =
             Path.Combine(Path.GetDirectoryName(path_mindmap), Path.GetFileNameWithoutExtension(path_mindmap) + ".pptx");
 
+        
+        File.Copy(path_template, path_file_save_as, true);
+
+		// Define 13 custom colors that look good on notes
 	    var list_colors_to_use = new Queue<Color> ( new [] {
             Color.PaleGreen,
             Color.Blue,
@@ -210,13 +241,16 @@ class Script
             Color.Orchid,
 	    });
 
-        // Create a new powerpoint presentation
+        // Create a new powerpoint presentation 
         var pp_app = new Application
         {
             WindowState = PpWindowState.ppWindowMinimized
         };
 
-        var pp_pres = pp_app.Presentations.Add();
+        // Copy the original file in order to take also screen aspect ratio, delete the first slide
+
+        var pp_pres = pp_app.Presentations.Open(path_file_save_as);
+        pp_pres.Slides[1].Delete();
         var xml_mm = XDocument.Load(path_mindmap);
         
         // Find all user-stories
@@ -293,7 +327,7 @@ class Script
 
                 AddNewSlide(
                     pp_pres,
-                    path_file_template,
+                    path_template,
                     translation_titles,
                     translation_colors
                 );
@@ -303,7 +337,7 @@ class Script
         }
         
         // Save and close the presentation
-	    pp_pres.SaveAs(path_file_save_as);
+	    pp_pres.Save();
         pp_pres.Close();
         pp_app.Quit();
 	}
