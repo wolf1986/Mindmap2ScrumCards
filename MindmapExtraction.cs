@@ -28,6 +28,9 @@ class Script
             {4, Color.LightGreen},
             {5, Color.DodgerBlue},
             {6, Color.Gray},
+			{7, Color.Red},
+            {8, Color.Brown},
+            {9, Color.Purple},			
         };
 
     // Get number in braces in the end of the string - Some User Story (12) 
